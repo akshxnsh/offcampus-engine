@@ -6,6 +6,7 @@ signal (why now), signal_url, context (text for the LLM), contacts (optional).
 import html
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse
 
 import feedparser
@@ -52,15 +53,50 @@ def keyword_hits(text, profile):
                if re.search(rf"(?<![a-z0-9]){re.escape(k.lower())}(?![a-z0-9])", t))
 
 
-def resolve_domain(name):
-    """Company name -> website domain via Clearbit's free autocomplete. Exact name matches only."""
+NAME_SUFFIX_RE = re.compile(r"\b(labs?|ai|technologies|technology|tech|inc|ltd|llc|pvt|limited)\b\.?", re.I)
+HINT_STOP = {"startup", "company", "platform", "based", "powered", "for", "and", "the", "of", "to", "in", "an",
+             "with", "firm", "brand", "new", "that", "its", "their", "from"}
+
+
+def resolve_domain(name, hint=""):
+    """Company name -> website domain.
+
+    Without a hint: Clearbit's free autocomplete, exact name matches only.
+    With a hint (what the company does): also tries name.ai/.com/... and keeps the first candidate whose
+    homepage actually talks about the hinted things, so a same-named company is not picked by mistake.
+    """
     norm = lambda s: re.sub(r"[^a-z0-9]", "", s.lower())
+    candidates = []
     try:
-        for s in http.get("https://autocomplete.clearbit.com/v1/companies/suggest", params={"query": name}).json():
-            if norm(s["name"]) == norm(name):
-                return s["domain"]
+        suggestions = http.get("https://autocomplete.clearbit.com/v1/companies/suggest", params={"query": name}).json()
+        candidates = [s["domain"] for s in suggestions if norm(s["name"]) == norm(name)]
     except Exception:
         pass
+    words = [w for w in dict.fromkeys(re.findall(r"[a-z]{2,}", hint.lower())) if w not in HINT_STOP]
+    if not words:
+        return candidates[0] if candidates else ""
+
+    core = norm(NAME_SUFFIX_RE.sub("", name))
+    for slug in dict.fromkeys([norm(name), core]):
+        if len(slug) >= 4:
+            candidates += [slug + tld for tld in (".ai", ".com", ".io", ".in", ".co")]
+    if os.getenv("SERPER_API_KEY"):
+        candidates += [d for d in (domain_of(r["url"]) for r in search(f"{name} {hint} official website", 5))
+                       if core and core in norm(d)]
+    candidates = list(dict.fromkeys(candidates))
+
+    def talks_about_it(domain):
+        try:
+            r = http.get(f"https://{domain}", timeout=6)
+            page = text_of(r.text).lower() if r.status_code == 200 else ""
+        except Exception:
+            return False
+        return sum(bool(re.search(rf"\b{re.escape(w)}\b", page)) for w in words) >= min(2, len(words))
+
+    with ThreadPoolExecutor(8) as pool:
+        for domain, good in zip(candidates, pool.map(talks_about_it, candidates)):
+            if good:
+                return domain
     return ""
 
 
@@ -182,7 +218,7 @@ def funding(profile, log):
         name = str(it.get("company", "")).strip()
         if not name:
             continue
-        domain = resolve_domain(name)
+        domain = resolve_domain(name, hint=str(it.get("what") or ""))
         leads.append({
             "name": name, "domain": domain, "website": f"https://{domain}" if domain else None,
             "description": it.get("what"), "location": None, "team_size": None,

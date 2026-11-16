@@ -139,7 +139,8 @@ def find(lead, log):
     contacts += site_contacts
     contacts += apollo(domain, want_hr=size > 200, log=log)
 
-    if size <= 200 and not any(c["conf"] == "verified" for c in contacts):
+    # founders for small/mid companies, or as a last resort when nothing else turned up
+    if (size <= 200 and not any(c["conf"] == "verified" for c in contacts)) or not contacts:
         people = yc_founders(lead["signal_url"]) if lead.get("source") == "yc" else linkedin_founders(lead["name"])
         if people and has_mx(domain):
             for p in people:

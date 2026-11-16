@@ -23,7 +23,9 @@ EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-
 FREEMAIL = {"gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "proton.me", "protonmail.com", "icloud.com"}
 JUNIOR_RE = re.compile(r"\b(intern(ship)?s?|junior|new[- ]grads?|entry[- ]level|graduates?|early[- ]career|"
                        r"freshers?|trainee|sde[- ]?1|0-[12] years?)\b", re.I)
-SENIOR_RE = re.compile(r"\b(senior|sr|staff|principal|lead|head|director|manager|vp|architect)\b", re.I)
+DEV_RE = re.compile(r"\b(engineer|developer|software|sde|backend|front-?end|full-?stack|programmer|devops|"
+                    r"machine learning)\b", re.I)
+SENIOR_RE =re.compile(r"\b(senior|sr|staff|principal|lead|head|director|manager|vp|architect)\b", re.I)
 # hosts that are job boards / link tools / app hosting, never the company's own site
 NOT_COMPANY_RE = re.compile(
     r"(^|\.)(lever\.co|greenhouse\.io|ashbyhq\.com|workable\.com|linkedin\.com|notion\.site|notion\.so|google\.com|"
@@ -201,7 +203,7 @@ def jobs(profile, log):
     except Exception as e:
         log(f"  Remotive failed: {e}")
     try:
-        for j in http.get("https://remoteok.com/api").json()[1:]:
+        for j in http.get("https://remoteok.com/api", timeout=40).json()[1:]:
             if set(j.get("tags") or []) & {"dev", "engineer", "backend", "frontend", "full stack", "software"}:
                 posts.append((j["company"], j["position"], j.get("location", ""), j["url"], text_of(j.get("description"))))
     except Exception as e:
@@ -209,7 +211,7 @@ def jobs(profile, log):
 
     ranked = []
     for company, title, location, url, desc in posts:
-        if SENIOR_RE.search(title) or (location and not INDIA_OK_RE.search(location)):
+        if not DEV_RE.search(title) or SENIOR_RE.search(title) or (location and not INDIA_OK_RE.search(location)):
             continue
         score = bool(JUNIOR_RE.search(title)) * 3 + keyword_hits(f"{title} {desc}", profile)
         ranked.append((score, {

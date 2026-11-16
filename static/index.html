@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OffCampus Engine</title>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1c1b18; --muted: #6d6a62; --line: #e4e1d8;
+  --accent: #1f5f4a; --accent-ink: #ffffff; --soft: #e9f1ed; --warn: #9a5b00; --warn-soft: #fbf0d9;
+  --bad: #a3322a; --bad-soft: #f8e4e1; --good: #1f6b3a; --good-soft: #e2f1e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151614; --panel: #1e201d; --ink: #ecebe6; --muted: #9a988f; --line: #30332e;
+    --accent: #6fc3a3; --accent-ink: #10201a; --soft: #22302a; --warn: #e2b05a; --warn-soft: #3a2f17;
+    --bad: #ee8f85; --bad-soft: #3b2220; --good: #7fcf97; --good-soft: #1e3225;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 20px; padding: 12px 24px; border-bottom: 1px solid var(--line);
+  background: var(--panel); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+nav { display: flex; gap: 4px; }
+nav button { border: 0; background: none; color: var(--muted); padding: 6px 12px; border-radius: 6px; font: inherit; cursor: pointer; }
+nav button.on { background: var(--soft); color: var(--accent); font-weight: 600; }
+#meters { margin-left: auto; display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+.meter { min-width: 150px; }
+.meter .bar { height: 4px; background: var(--line); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.meter .bar i { display: block; height: 100%; background: var(--accent); }
+main { padding: 20px 24px 80px; max-width: 1280px; margin: 0 auto; }
+h2 { font-size: 15px; margin: 0 0 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+.muted { color: var(--muted); }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.pill { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 3px 11px;
+  font: inherit; font-size: 13px; cursor: pointer; }
+.pill.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.pill b { font-weight: 600; opacity: .7; margin-left: 4px; }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--soft); }
+.name { font-weight: 600; }
+.sub { font-size: 12px; color: var(--muted); }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; background: var(--soft); color: var(--accent); white-space: nowrap; }
+.tag.warn { background: var(--warn-soft); color: var(--warn); }
+.tag.bad { background: var(--bad-soft); color: var(--bad); }
+.tag.good { background: var(--good-soft); color: var(--good); }
+.tag.plain { background: var(--line); color: var(--muted); }
+.fit { font-variant-numeric: tabular-nums; font-weight: 700; }
+button.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 7px; padding: 7px 13px; font: inherit; cursor: pointer; }
+button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.btn:disabled { opacity: .5; cursor: default; }
+input[type=text], input[type=number], textarea, select { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  border-radius: 7px; padding: 7px 9px; font: inherit; }
+textarea { resize: vertical; }
+label.f { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; }
+.checks label { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+pre#log { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-height: 220px; max-height: 420px;
+  overflow: auto; font: 12px/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; margin: 0; }
+#drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100vw); background: var(--panel); border-left: 1px solid var(--line);
+  box-shadow: -12px 0 40px rgba(0,0,0,.14); padding: 20px 22px; overflow-y: auto; z-index: 10; }
+#drawer .close { float: right; }
+#drawer h3 { margin: 0 0 2px; font-size: 18px; }
+#drawer a { color: var(--accent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 16px;
+  border-radius: 8px; z-index: 20; max-width: 90vw; }
+.setup li { margin: 4px 0; }
+code { background: var(--line); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">OffCampus Engine</div>
+  <nav>
+    <button data-tab="leads" class="on">Leads</button>
+    <button data-tab="run">Run</button>
+    <button data-tab="profile">Profile &amp; setup</button>
+  </nav>
+  <div id="meters"></div>
+</header>
+
+<main>
+  <section id="tab-leads">
+    <div class="pills" id="filters"></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Company</th><th>Why now</th><th>Fit</th><th>Recipient</th><th>Status</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="muted" id="empty" hidden>No leads here yet. Upload your resume in <b>Profile &amp; setup</b>, then start a run from <b>Run</b>.</p>
+  </section>
+
+  <section id="tab-run" hidden>
+    <div class="grid2">
+      <div class="card">
+        <h2>Where to look</h2>
+        <div class="checks" id="sources"></div>
+        <h2 style="margin-top:16px">Steps</h2>
+        <div class="checks" id="stages"></div>
+        <div class="actions"><button class="btn primary" id="runbtn">Start run</button></div>
+      </div>
+      <div class="card">
+        <h2>Progress <span class="muted" id="runstate"></span></h2>
+        <pre id="log">Nothing has run yet.</pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-profile" hidden>
+    <div class="grid2">
+      <div>
+        <div class="card">
+          <h2>Setup</h2>
+          <ul class="setup" id="setup"></ul>
+          <p class="muted">Keys live in the <code>.env</code> file in the project folder (copy <code>.env.example</code>). Restart the app after editing it.</p>
+        </div>
+        <div class="card">
+          <h2>Resume</h2>
+          <p class="muted" id="resumename">No resume uploaded.</p>
+          <input type="file" id="resumefile" accept="application/pdf">
+          <p class="muted">The PDF is attached to every Gmail draft, and its text is sent to Groq once to build the profile on the right.</p>
+        </div>
+        <div class="card">
+          <h2>Preferences</h2>
+          <label class="f">Minimum fit score to pursue (0-100)</label>
+          <input type="number" id="threshold" min="0" max="100">
+          <label class="f">New leads per source, per run</label>
+          <input type="number" id="per_source" min="1" max="50">
+          <label class="f">Extra instructions for every email (tone, what you want, things to always or never mention)</label>
+          <textarea id="notes" rows="4"></textarea>
+          <div class="actions"><button class="btn primary" id="saveprefs">Save preferences</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Profile used for matching and writing</h2>
+        <p class="muted">Built from your resume. Edit anything: tighten the highlights, fix target roles, add keywords. Emails only use facts from here.</p>
+        <textarea id="profilejson" rows="30" spellcheck="false" style="font:12px/1.5 ui-monospace,Consolas,monospace"></textarea>
+        <div class="actions"><button class="btn primary" id="saveprofile">Save profile</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<aside id="drawer" hidden></aside>
+<div id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || '') ? esc(u) : '#';
+
+const STATUS = {drafted: ['Drafted', ''], pushed: ['In Gmail drafts', 'good'], sent: ['Sent', 'good'], ready: ['Contact found', ''],
+  scored: ['Good fit', ''], new: ['New', 'plain'], nocontact: ['No contact', 'warn'], lowfit: ['Low fit', 'plain'], skipped: ['Skipped', 'plain']};
+const SOURCE = {yc: 'YC companies marked as hiring', hn: 'Hacker News "Who is hiring"', funding: 'Funding news, last 7 days',
+  jobs: 'Remote job boards (Remotive, RemoteOK)', social: 'LinkedIn / X hiring posts'};
+const STAGE = {discover: 'Find new startups', score: 'Score fit against my profile', contacts: 'Find who to email',
+  draft: 'Write the emails', push: 'Save drafts to Gmail automatically'};
+const CONF = {verified: ['verified', 'good'], found: ['found', ''], guess: ['guess', 'warn']};
+
+let leads = [], filter = 'all', open = null, lastLogLen = -1, wasRunning = false, formsFilled = false;
+
+async function api(path, opts = {}) {
+  if (opts.json !== undefined) { opts.body = JSON.stringify(opts.json); opts.headers = {'Content-Type': 'application/json'}; }
+  const r = await fetch(path, opts);
+  if (!r.ok) { let d; try { d = (await r.json()).detail; } catch {} throw new Error(typeof d === 'string' ? d : r.statusText); }
+  return r.json();
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 4500); }
+async function guard(btn, fn) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Working…';
+  try { await fn(); } catch (e) { toast(e.message); } finally { btn.disabled = false; btn.textContent = label; }
+}
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  for (const t of ['leads', 'run', 'profile']) $('#tab-' + t).hidden = t !== b.dataset.tab;
+});
+
+// ---- leads ----
+function renderLeads(counts) {
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  $('#filters').innerHTML = [['all', 'All', total], ...Object.keys(STATUS).filter(s => counts[s]).map(s => [s, STATUS[s][0], counts[s]])]
+    .map(([k, label, n]) => `<button class="pill ${filter === k ? 'on' : ''}" data-f="${k}">${label}<b>${n}</b></button>`).join('');
+  document.querySelectorAll('#filters .pill').forEach(p => p.onclick = () => { filter = p.dataset.f; renderLeads(counts); });
+  const shown = leads.filter(l => filter === 'all' || l.status === filter);
+  $('#empty').hidden = shown.length > 0;
+  $('#rows').innerHTML = shown.map(l => {
+    const [st, cls] = STATUS[l.status] || [l.status, 'plain'];
+    const conf = CONF[l.to_conf];
+    return `<tr data-id="${l.id}">
+      <td><div class="name">${esc(l.name)}</div><div class="sub">${esc(l.description || l.domain || '').slice(0, 90)}</div></td>
+      <td><span class="tag plain">${esc(l.source)}</span> <span class="sub">${esc(l.signal || '')}</span></td>
+      <td class="fit">${l.fit_score ?? '–'}</td>
+      <td>${l.to_email ? `${esc(l.to_name || l.to_title || '')}<div class="sub">${esc(l.to_email)} ${conf ? `<span class="tag ${conf[1]}">${conf[0]}</span>` : ''}</div>` : '<span class="muted">–</span>'}</td>
+      <td><span class="tag ${cls}">${st}</span></td></tr>`;
+  }).join('');
+  document.querySelectorAll('#rows tr').forEach(tr => tr.onclick = () => openLead(+tr.dataset.id));
+}
+
+function openLead(id) {
+  const l = leads.find(x => x.id === id); if (!l) return;
+  open = id;
+  const d = $('#drawer'); d.hidden = false;
+  const words = s => (s || '').trim().split(/\s+/).filter(Boolean).length;
+  d.innerHTML = `
+    <button class="btn close" id="dclose">Close</button>
+    <h3>${esc(l.name)}</h3>
+    <div class="sub">${[l.website ? `<a href="${safeUrl(l.website)}" target="_blank" rel="noopener">${esc(l.domain)}</a>` : '', esc(l.location || ''), l.team_size ? `${l.team_size} people` : ''].filter(Boolean).join(' · ')}</div>
+    <p>${esc(l.description || '')}</p>
+    <p><span class="tag">${esc(l.signal || '')}</span> ${l.signal_url ? `<a href="${safeUrl(l.signal_url)}" target="_blank" rel="noopener">source</a>` : ''}</p>
+    ${l.fit_score != null ? `<p class="sub"><b>Fit ${l.fit_score}</b> · ${esc(l.fit_reason || '')} · ask for: <b>${esc(l.role || '?')}</b></p>` : ''}
+    <label class="f">Recipient</label>
+    ${l.contacts.length ? `<select id="dcontact">${l.contacts.map((c, i) => `<option value="${i}" ${c.email === l.to_email ? 'selected' : ''}>${esc([c.name, c.title, c.email].filter(Boolean).join(' · '))} (${esc(c.conf)})</option>`).join('')}<option value="-1" ${l.contacts.some(c => c.email === l.to_email) ? '' : 'selected'}>Custom…</option></select>` : ''}
+    <div class="grid2" style="gap:8px;margin-top:8px">
+      <input type="text" id="dname" placeholder="Name" value="${esc(l.to_name || '')}">
+      <input type="text" id="demail" placeholder="email@company.com" value="${esc(l.to_email || '')}">
+    </div>
+    ${l.to_conf === 'guess' ? '<p class="sub"><span class="tag warn">guess</span> This address is a first-name pattern guess. It may bounce; verify it or pick another recipient.</p>' : ''}
+    <label class="f">Subject</label>
+    <input type="text" id="dsubject" value="${esc(l.subject || '')}">
+    <label class="f">Body <span id="dwords" style="font-weight:400"></span></label>
+    <textarea id="dbody" rows="14">${esc(l.body || '')}</textarea>
+    <div class="actions">
+      <button class="btn primary" id="dpush">Save to Gmail drafts</button>
+      <button class="btn" id="dsave">Save edits</button>
+      <button class="btn" id="drewrite">${l.body ? 'Rewrite' : 'Write email'}</button>
+      <button class="btn" id="dsent">Mark sent</button>
+      <button class="btn" id="dskip">Skip</button>
+    </div>
+    <p class="sub">Status: ${esc((STATUS[l.status] || [l.status])[0])}. Drafts land in the Drafts folder of your outreach Gmail with the resume attached; nothing is ever sent from here.</p>`;
+  const count = () => $('#dwords').textContent = `· ${words($('#dbody').value)} words`;
+  count(); $('#dbody').oninput = count;
+  $('#dclose').onclick = () => { d.hidden = true; open = null; };
+  let picked = {to_title: l.to_title, to_conf: l.to_conf};
+  if ($('#dcontact')) $('#dcontact').onchange = e => {
+    const c = l.contacts[+e.target.value]; if (!c) return;
+    $('#dname').value = c.name || ''; $('#demail').value = c.email; picked = {to_title: c.title, to_conf: c.conf};
+  };
+  const fields = () => {
+    const email = $('#demail').value.trim();
+    const known = l.contacts.find(c => c.email === email);
+    return {to_name: $('#dname').value.trim(), to_email: email, subject: $('#dsubject').value, body: $('#dbody').value,
+      to_title: known ? known.title : (email === l.to_email ? picked.to_title : ''), to_conf: known ? known.conf : (email === l.to_email ? picked.to_conf : 'found')};
+  };
+  const save = extra => api(`/api/leads/${id}`, {method: 'PATCH', json: {...fields(), ...extra}});
+  const after = async msg => { await refresh(true); openLead(id); toast(msg); };
+  $('#dsave').onclick = e => guard(e.target, async () => { await save(); await after('Saved'); });
+  $('#drewrite').onclick = e => guard(e.target, async () => { await save(); await api(`/api/leads/${id}/draft`, {method: 'POST'}); await after('New draft written'); });
+  $('#dpush').onclick = e => guard(e.target, async () => { await save(); await api(`/api/leads/${id}/push`, {method: 'POST'}); await after('Saved to Gmail drafts'); });
+  $('#dsent').onclick = e => guard(e.target, async () => { await save({status: 'sent'}); await after('Marked as sent'); });
+  $('#dskip').onclick = e => guard(e.target, async () => { await save({status: 'skipped'}); await after('Skipped'); });
+}
+
+// ---- run ----
+function fillRunForm(s) {
+  $('#sources').innerHTML = s.sources.map(k => `<label><input type="checkbox" value="${k}" checked> ${SOURCE[k] || k}</label>`).join('');
+  $('#stages').innerHTML = Object.keys(STAGE).map(k => `<label><input type="checkbox" value="${k}" ${k === 'push' ? '' : 'checked'}> ${STAGE[k]}</label>`).join('');
+}
+$('#runbtn').onclick = e => guard(e.target, async () => {
+  const picked = sel => [...document.querySelectorAll(sel + ' input:checked')].map(i => i.value);
+  await api('/api/run', {method: 'POST', json: {sources: picked('#sources'), stages: picked('#stages')}});
+  await refresh();
+});
+
+// ---- profile ----
+$('#resumefile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const body = new FormData(); body.append('file', f);
+  toast('Reading resume and building profile…');
+  try { await api('/api/resume', {method: 'POST', body}); formsFilled = false; await refresh(); toast('Profile built. Review it on the right.'); }
+  catch (err) { toast(err.message); }
+  e.target.value = '';
+};
+$('#saveprofile').onclick = e => guard(e.target, async () => {
+  let p; try { p = JSON.parse($('#profilejson').value); } catch { throw new Error('Profile is not valid JSON'); }
+  await api('/api/profile', {method: 'PUT', json: p}); toast('Profile saved');
+});
+$('#saveprefs').onclick = e => guard(e.target, async () => {
+  await api('/api/prefs', {method: 'PUT', json: {threshold: $('#threshold').value, per_source: $('#per_source').value, notes: $('#notes').value}});
+  toast('Preferences saved');
+});
+
+// ---- polling ----
+async function refresh(forceLeads) {
+  const s = await api('/api/state');
+  $('#meters').innerHTML = s.usage.map(u => `<div class="meter" title="Groq tokens used in the last 24h">${esc(u.model.split('/').pop())}: ${Math.round(u.used / 1000)}K / ${Math.round(u.cap / 1000)}K
+    <div class="bar"><i style="width:${Math.min(100, u.used / u.cap * 100)}%"></i></div></div>`).join('');
+  const k = s.keys, row = (ok, yes, no, optional) => `<li><span class="tag ${ok ? 'good' : optional ? 'plain' : 'bad'}">${ok ? 'ready' : optional ? 'optional' : 'missing'}</span> ${ok ? yes : no}</li>`;
+  $('#setup').innerHTML =
+    row(k.groq, 'Groq API key', 'Groq API key: set <code>GROQ_API_KEY</code>') +
+    row(!!s.resume, 'Resume uploaded', 'Resume: upload your PDF below') +
+    row(k.gmail, 'Gmail drafts', 'Gmail: set <code>GMAIL_ADDRESS</code> and <code>GMAIL_APP_PASSWORD</code>') +
+    row(k.apollo, 'Apollo contact lookup', 'Apollo: set <code>APOLLO_API_KEY</code> for verified emails', true) +
+    row(k.search, 'Search API for LinkedIn / X posts', 'Search: set <code>SERPER_API_KEY</code> for LinkedIn / X posts', true);
+  $('#resumename').textContent = s.resume ? `Current: ${s.resume}` : 'No resume uploaded.';
+  if (!formsFilled) {
+    formsFilled = true; fillRunForm(s);
+    $('#profilejson').value = s.profile ? JSON.stringify(s.profile, null, 2) : '';
+    $('#threshold').value = s.prefs.threshold; $('#per_source').value = s.prefs.per_source; $('#notes').value = s.prefs.notes;
+  }
+  $('#runstate').textContent = s.run.running ? `· running: ${s.run.stage}` : '';
+  $('#runbtn').disabled = s.run.running;
+  const logChanged = s.run.log.length !== lastLogLen;
+  if (logChanged && s.run.log.length) { $('#log').textContent = s.run.log.join('\n'); $('#log').scrollTop = 1e9; }
+  if (forceLeads || logChanged || wasRunning !== s.run.running) { leads = await api('/api/leads'); renderLeads(s.counts); }
+  lastLogLen = s.run.log.length; wasRunning = s.run.running;
+}
+refresh(true).catch(e => toast(e.message));
+setInterval(() => { if (open === null || wasRunning) refresh().catch(() => {}); }, 2500);
+</script>
+</body>
+</html>
